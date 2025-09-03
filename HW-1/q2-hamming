@@ -1,1 +1,76 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
+void encodeHamming(int data[4], int encoded[7]) {
+    encoded[2] = data[0]; // position 3
+    encoded[4] = data[1]; // position 5
+    encoded[5] = data[2]; // position 6
+    encoded[6] = data[3]; // position 7
+
+    encoded[0] = encoded[2] ^ encoded[4] ^ encoded[6]; // p1
+    encoded[1] = encoded[2] ^ encoded[5] ^ encoded[6]; // p2
+    encoded[3] = encoded[4] ^ encoded[5] ^ encoded[6]; // p4
+}
+
+void introduceError(int encoded[7]) {
+    int pos = rand() % 7; // random position in 0..6
+    encoded[pos] ^= 1;    // flip that bit
+    printf("Introduced error at position %d (index %d)\n", pos + 1, pos);
+}
+
+void correctHamming(int encoded[7]) {
+    int s1 = encoded[0] ^ encoded[2] ^ encoded[4] ^ encoded[6]; // parity 1,3,5,7
+    int s2 = encoded[1] ^ encoded[2] ^ encoded[5] ^ encoded[6]; // parity 2,3,6,7
+    int s4 = encoded[3] ^ encoded[4] ^ encoded[5] ^ encoded[6]; // parity 4,5,6,7
+
+    int syndrome = s1 + (s2 << 1) + (s4 << 2);
+
+    if (syndrome == 0) {
+        printf("No error detected (syndrome = 0).\n");
+    } else if (syndrome >= 1 && syndrome <= 7) {
+        printf("Error detected at position %d. Correcting...\n", syndrome);
+        encoded[syndrome - 1] ^= 1; // flip the erroneous bit
+    } else {
+        printf("Syndrome out of range: %d\n", syndrome);
+    }
+}
+
+void printBits(const char *label, int bits[], int n) {
+    printf("%s", label);
+    for (int i = 0; i < n; ++i) printf("%d", bits[i]);
+    printf("\n");
+}
+
+int main() {
+    srand((unsigned)time(NULL));
+
+    int data[4] = {1, 0, 1, 1}; // example 4-bit message
+    int encoded[7] = {0};
+
+    encodeHamming(data, encoded);
+
+    printf("Original 4-bit message: ");
+    for (int i = 0; i < 4; ++i) printf("%d", data[i]);
+    printf("\n");
+
+    printBits("Encoded 7-bit message:  ", encoded, 7);
+
+    introduceError(encoded);
+    printBits("Corrupted message:      ", encoded, 7);
+
+    correctHamming(encoded);
+    printBits("Corrected message:      ", encoded, 7);
+
+    int recovered[4];
+    recovered[0] = encoded[2];
+    recovered[1] = encoded[4];
+    recovered[2] = encoded[5];
+    recovered[3] = encoded[6];
+
+    printf("Recovered 4-bit message: ");
+    for (int i = 0; i < 4; ++i) printf("%d", recovered[i]);
+    printf("\n");
+
+    return 0;
+}
